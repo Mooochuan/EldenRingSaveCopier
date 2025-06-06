@@ -10,22 +10,22 @@ namespace EldenRingSaveCopy.Saves.Model
     public class SaveGame: ISaveGame
     {
         // Elden Ring offsets
-        private const int ER_SLOT_START_INDEX = 0x310;
-        private const int ER_SLOT_LENGTH = 0x280000;
-        private const int ER_SAVE_HEADERS_SECTION_START_INDEX = 0x19003B0;
-        private const int ER_SAVE_HEADERS_SECTION_LENGTH = 0x60000;
-        private const int ER_SAVE_HEADER_START_INDEX = 0x1901D0E;
-        private const int ER_SAVE_HEADER_LENGTH = 0x24C;
-        private const int ER_CHAR_ACTIVE_STATUS_START_INDEX = 0x1901D04;
+        public const int ER_SLOT_START_INDEX = 0x310;
+        public const int ER_SLOT_LENGTH = 0x280000;
+        public const int ER_SAVE_HEADERS_SECTION_START_INDEX = 0x19003B0;
+        public const int ER_SAVE_HEADERS_SECTION_LENGTH = 0x60000;
+        public const int ER_SAVE_HEADER_START_INDEX = 0x1901D0E;
+        public const int ER_SAVE_HEADER_LENGTH = 0x24C;
+        public const int ER_CHAR_ACTIVE_STATUS_START_INDEX = 0x1901D04;
 
         // Nightreign offsets (to be determined)
-        private const int NR_SLOT_START_INDEX = 0x310;
-        private const int NR_SLOT_LENGTH = 0x1A0000;
-        private const int NR_SAVE_HEADERS_SECTION_START_INDEX = 0x10003B0;
-        private const int NR_SAVE_HEADERS_SECTION_LENGTH = 0x40000;
-        private const int NR_SAVE_HEADER_START_INDEX = 0x1001D0E;
-        private const int NR_SAVE_HEADER_LENGTH = 0x24C;
-        private const int NR_CHAR_ACTIVE_STATUS_START_INDEX = 0x1001D04;
+        public const int NR_SLOT_START_INDEX = 0x310;
+        public const int NR_SLOT_LENGTH = 0x1A0000;
+        public const int NR_SAVE_HEADERS_SECTION_START_INDEX = 0x10003B0;
+        public const int NR_SAVE_HEADERS_SECTION_LENGTH = 0x40000;
+        public const int NR_SAVE_HEADER_START_INDEX = 0x1001D0E;
+        public const int NR_SAVE_HEADER_LENGTH = 0x24C;
+        public const int NR_CHAR_ACTIVE_STATUS_START_INDEX = 0x1001D04;
 
         private const int CHAR_NAME_LENGTH = 0x22;
         private const int CHAR_LEVEL_LOCATION = 0x22;
@@ -37,7 +37,7 @@ namespace EldenRingSaveCopy.Saves.Model
         private byte[] headerData;
         private Guid id;
         private int index;
-        private bool isNightreign;
+        public bool isNightreign { get; private set; }
 
         public SaveGame()
         {

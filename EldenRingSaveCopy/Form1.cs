@@ -223,12 +223,15 @@ namespace EldenRingSaveCopy
 
         private int SlotStartIndex(SaveGame save)
         {
-            return (SaveGame.SLOT_START_INDEX + (save.Index * 0x10) + (save.Index * SaveGame.SLOT_LENGTH));
+            return (save.isNightreign ? SaveGame.NR_SLOT_START_INDEX : SaveGame.ER_SLOT_START_INDEX) + 
+                   (save.Index * 0x10) + 
+                   (save.Index * (save.isNightreign ? SaveGame.NR_SLOT_LENGTH : SaveGame.ER_SLOT_LENGTH));
         }
 
         private int HeaderStartIndex(SaveGame save)
         {
-            return (SaveGame.SAVE_HEADER_START_INDEX + (save.Index * SaveGame.SAVE_HEADER_LENGTH));
+            return (save.isNightreign ? SaveGame.NR_SAVE_HEADER_START_INDEX : SaveGame.ER_SAVE_HEADER_START_INDEX) + 
+                   (save.Index * (save.isNightreign ? SaveGame.NR_SAVE_HEADER_LENGTH : SaveGame.ER_SAVE_HEADER_LENGTH));
         }
 
         private void copyButton_Click(object sender, EventArgs e)
