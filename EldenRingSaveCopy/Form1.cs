@@ -188,11 +188,25 @@ namespace EldenRingSaveCopy
             _fileManager = new FileManager();
 
             fromSaveSlot.DisplayMember = "CharacterName";
-            //fromSaveSlot.DataSource = this.sourceSaveGames;
             fromSaveSlot.DataSource = new BindingSource() { DataSource = this.sourceSaveGames }.DataSource;
             toSaveSlot.DisplayMember = "CharacterName";
-            //toSaveSlot.DataSource = this.targetSaveGames;
             toSaveSlot.DataSource = new BindingSource() { DataSource = this.targetSaveGames }.DataSource;
+
+            // Add analyze button
+            Button analyzeButton = new Button
+            {
+                Text = "Analyze Save File",
+                Location = new Point(10, 10),
+                Size = new Size(120, 30)
+            };
+            analyzeButton.Click += AnalyzeButton_Click;
+            this.Controls.Add(analyzeButton);
+        }
+
+        private void AnalyzeButton_Click(object sender, EventArgs e)
+        {
+            var analyzer = new SaveFileAnalyzer();
+            analyzer.Show();
         }
 
         private void fromSaveSlot_SelectedIndexChanged(object sender, EventArgs e)
