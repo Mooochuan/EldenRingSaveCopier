@@ -18,14 +18,14 @@ namespace EldenRingSaveCopy.Saves.Model
         public const int ER_SAVE_HEADER_LENGTH = 0x24C;
         public const int ER_CHAR_ACTIVE_STATUS_START_INDEX = 0x1901D04;
 
-        // Nightreign offsets (to be determined)
-        public const int NR_SLOT_START_INDEX = 0x310;
-        public const int NR_SLOT_LENGTH = 0x1A0000;
-        public const int NR_SAVE_HEADERS_SECTION_START_INDEX = 0x10003B0;
-        public const int NR_SAVE_HEADERS_SECTION_LENGTH = 0x40000;
-        public const int NR_SAVE_HEADER_START_INDEX = 0x1001D0E;
-        public const int NR_SAVE_HEADER_LENGTH = 0x24C;
-        public const int NR_CHAR_ACTIVE_STATUS_START_INDEX = 0x1001D04;
+        // Nightreign offsets (will be determined by scanning)
+        public static int NR_SLOT_START_INDEX = 0x310;
+        public static int NR_SLOT_LENGTH = 0x1A0000;
+        public static int NR_SAVE_HEADERS_SECTION_START_INDEX = 0x11003B0;
+        public static int NR_SAVE_HEADERS_SECTION_LENGTH = 0x40000;
+        public static int NR_SAVE_HEADER_START_INDEX = 0x1101D0E;
+        public static int NR_SAVE_HEADER_LENGTH = 0x24C;
+        public static int NR_CHAR_ACTIVE_STATUS_START_INDEX = 0x1101D04;
 
         private const int CHAR_NAME_LENGTH = 0x22;
         private const int CHAR_LEVEL_LOCATION = 0x22;
@@ -83,6 +83,50 @@ namespace EldenRingSaveCopy.Saves.Model
         public int CharacterLevel { get; set; }
         public int SecondsPlayed { get; set; }
 
+        private static void ScanForOffsets(byte[] data)
+        {
+            string debugPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "save_scan.txt");
+            using (StreamWriter writer = new StreamWriter(debugPath))
+            {
+                writer.WriteLine("Scanning save file for character names and patterns...");
+                writer.WriteLine($"File size: {data.Length} bytes");
+
+                // Look for Unicode character names (they start with a non-zero byte followed by 0x00)
+                for (int i = 0; i < data.Length - 2; i++)
+                {
+                    if (data[i] != 0 && data[i + 1] == 0)
+                    {
+                        // Found potential start of a Unicode string
+                        byte[] potentialName = new byte[CHAR_NAME_LENGTH];
+                        Array.Copy(data, i, potentialName, 0, CHAR_NAME_LENGTH);
+                        string name = Encoding.Unicode.GetString(potentialName).TrimEnd('\0');
+                        
+                        // Only log if it looks like a real name (contains letters and is not too short)
+                        if (name.Length >= 2 && name.All(c => char.IsLetterOrDigit(c) || char.IsPunctuation(c) || char.IsWhiteSpace(c)))
+                        {
+                            writer.WriteLine($"\nPotential character name at offset 0x{i:X}:");
+                            writer.WriteLine($"Name: {name}");
+                            writer.WriteLine($"Raw bytes: {BitConverter.ToString(potentialName)}");
+                            
+                            // Look for level byte (usually 1-2 bytes after name)
+                            if (i + CHAR_NAME_LENGTH + 2 < data.Length)
+                            {
+                                byte level = data[i + CHAR_NAME_LENGTH + 2];
+                                writer.WriteLine($"Level byte at 0x{i + CHAR_NAME_LENGTH + 2:X}: {level}");
+                            }
+                            
+                            // Look for active status (usually a few bytes before name)
+                            if (i >= 4)
+                            {
+                                byte activeStatus = data[i - 4];
+                                writer.WriteLine($"Active status at 0x{i - 4:X}: {activeStatus}");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public bool LoadData(byte[] data, int slotIndex)
         {
             try
@@ -91,6 +135,12 @@ namespace EldenRingSaveCopy.Saves.Model
                 
                 // Determine if this is a Nightreign save file
                 isNightreign = data.Length < 20000000; // ER files are ~29MB, NR files are ~19MB
+
+                // If this is the first slot of a Nightreign save, scan for offsets
+                if (isNightreign && slotIndex == 0)
+                {
+                    ScanForOffsets(data);
+                }
 
                 // Select appropriate offsets based on file type
                 int SLOT_START_INDEX = isNightreign ? NR_SLOT_START_INDEX : ER_SLOT_START_INDEX;
