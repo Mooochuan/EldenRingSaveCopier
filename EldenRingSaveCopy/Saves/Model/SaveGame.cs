@@ -9,19 +9,27 @@ namespace EldenRingSaveCopy.Saves.Model
 {
     public class SaveGame: ISaveGame
     {
-        public const int SLOT_START_INDEX = 0x310;
-        public const int SLOT_LENGTH = 0x280000;
-        public const int SAVE_HEADERS_SECTION_START_INDEX = 0x19003B0;
-        public const int SAVE_HEADERS_SECTION_LENGTH = 0x60000;
-        public const int SAVE_HEADER_START_INDEX = 0x1901D0E;
-        public const int SAVE_HEADER_LENGTH = 0x24C;
-        public const int CHAR_ACTIVE_STATUS_START_INDEX = 0x1901D04;
+        // Elden Ring offsets
+        private const int ER_SLOT_START_INDEX = 0x310;
+        private const int ER_SLOT_LENGTH = 0x280000;
+        private const int ER_SAVE_HEADERS_SECTION_START_INDEX = 0x19003B0;
+        private const int ER_SAVE_HEADERS_SECTION_LENGTH = 0x60000;
+        private const int ER_SAVE_HEADER_START_INDEX = 0x1901D0E;
+        private const int ER_SAVE_HEADER_LENGTH = 0x24C;
+        private const int ER_CHAR_ACTIVE_STATUS_START_INDEX = 0x1901D04;
+
+        // Nightreign offsets (to be determined)
+        private const int NR_SLOT_START_INDEX = 0x310;
+        private const int NR_SLOT_LENGTH = 0x1A0000;
+        private const int NR_SAVE_HEADERS_SECTION_START_INDEX = 0x10003B0;
+        private const int NR_SAVE_HEADERS_SECTION_LENGTH = 0x40000;
+        private const int NR_SAVE_HEADER_START_INDEX = 0x1001D0E;
+        private const int NR_SAVE_HEADER_LENGTH = 0x24C;
+        private const int NR_CHAR_ACTIVE_STATUS_START_INDEX = 0x1001D04;
 
         private const int CHAR_NAME_LENGTH = 0x22;
         private const int CHAR_LEVEL_LOCATION = 0x22;
         private const int CHAR_PLAYED_START_INDEX = 0x26;
-        
-
 
         private bool active;
         private string characterName;
@@ -29,6 +37,7 @@ namespace EldenRingSaveCopy.Saves.Model
         private byte[] headerData;
         private Guid id;
         private int index;
+        private bool isNightreign;
 
         public SaveGame()
         {
@@ -80,11 +89,21 @@ namespace EldenRingSaveCopy.Saves.Model
             {
                 this.index = slotIndex;
                 
+                // Determine if this is a Nightreign save file
+                isNightreign = data.Length < 20000000; // ER files are ~29MB, NR files are ~19MB
+
+                // Select appropriate offsets based on file type
+                int SLOT_START_INDEX = isNightreign ? NR_SLOT_START_INDEX : ER_SLOT_START_INDEX;
+                int SLOT_LENGTH = isNightreign ? NR_SLOT_LENGTH : ER_SLOT_LENGTH;
+                int SAVE_HEADER_START_INDEX = isNightreign ? NR_SAVE_HEADER_START_INDEX : ER_SAVE_HEADER_START_INDEX;
+                int SAVE_HEADER_LENGTH = isNightreign ? NR_SAVE_HEADER_LENGTH : ER_SAVE_HEADER_LENGTH;
+                int CHAR_ACTIVE_STATUS_START_INDEX = isNightreign ? NR_CHAR_ACTIVE_STATUS_START_INDEX : ER_CHAR_ACTIVE_STATUS_START_INDEX;
+
                 // Debug logging
                 string debugPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "save_debug.txt");
                 using (StreamWriter writer = new StreamWriter(debugPath, true))
                 {
-                    writer.WriteLine($"\nLoading slot {slotIndex}:");
+                    writer.WriteLine($"\nLoading slot {slotIndex} from {(isNightreign ? "Nightreign" : "Elden Ring")} save:");
                     writer.WriteLine($"File size: {data.Length} bytes");
                     
                     // Check active status
@@ -114,7 +133,7 @@ namespace EldenRingSaveCopy.Saves.Model
             {
                 // Log any errors
                 File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "save_error.txt"), 
-                    $"Error loading slot {slotIndex}: {ex.Message}\n{ex.StackTrace}");
+                    $"Error loading slot {slotIndex} from {(isNightreign ? "Nightreign" : "Elden Ring")} save: {ex.Message}\n{ex.StackTrace}");
                 return false;
             }
         }
