@@ -254,13 +254,15 @@ namespace EldenRingSaveCopy
                 }
 
                 //Copy source save slot to target save slot in temp file
-                Array.Copy(sourceSave.SaveData, 0, newSave, SlotStartIndex(targetSave), SaveGame.SLOT_LENGTH);
+                Array.Copy(sourceSave.SaveData, 0, newSave, SlotStartIndex(targetSave), 
+                    sourceSave.isNightreign ? SaveGame.NR_SLOT_LENGTH : SaveGame.ER_SLOT_LENGTH);
 
                 //Copy save header to temp file
-                Array.Copy(sourceSave.HeaderData, 0, newSave, HeaderStartIndex(targetSave), SaveGame.SAVE_HEADER_LENGTH);
+                Array.Copy(sourceSave.HeaderData, 0, newSave, HeaderStartIndex(targetSave), 
+                    sourceSave.isNightreign ? SaveGame.NR_SAVE_HEADER_LENGTH : SaveGame.ER_SAVE_HEADER_LENGTH);
 
                 //Mark target slot as active
-                newSave[SaveGame.CHAR_ACTIVE_STATUS_START_INDEX + targetSave.Index] = 0x01;
+                newSave[(sourceSave.isNightreign ? SaveGame.NR_CHAR_ACTIVE_STATUS_START_INDEX : SaveGame.ER_CHAR_ACTIVE_STATUS_START_INDEX) + targetSave.Index] = 0x01;
 
                 //Calculate checksums
                 using (var md5 = MD5.Create())
@@ -270,9 +272,11 @@ namespace EldenRingSaveCopy
                     //Write checksum to temp target file
                     Array.Copy(md5.Hash, 0, newSave, SlotStartIndex(targetSave) - 0x10, 0x10);
                     //get header checksum
-                    md5.ComputeHash(newSave.Skip(SaveGame.SAVE_HEADERS_SECTION_START_INDEX).Take(SaveGame.SAVE_HEADERS_SECTION_LENGTH).ToArray());
+                    md5.ComputeHash(newSave.Skip(sourceSave.isNightreign ? SaveGame.NR_SAVE_HEADERS_SECTION_START_INDEX : SaveGame.ER_SAVE_HEADERS_SECTION_START_INDEX)
+                        .Take(sourceSave.isNightreign ? SaveGame.NR_SAVE_HEADERS_SECTION_LENGTH : SaveGame.ER_SAVE_HEADERS_SECTION_LENGTH).ToArray());
                     //Write headers checksum
-                    Array.Copy(md5.Hash, 0, newSave, SaveGame.SAVE_HEADERS_SECTION_START_INDEX - 0x10, 0x10);
+                    Array.Copy(md5.Hash, 0, newSave, 
+                        (sourceSave.isNightreign ? SaveGame.NR_SAVE_HEADERS_SECTION_START_INDEX : SaveGame.ER_SAVE_HEADERS_SECTION_START_INDEX) - 0x10, 0x10);
                 }
 
                 //Write temp file to target file
