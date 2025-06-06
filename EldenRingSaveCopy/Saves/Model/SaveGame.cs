@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace EldenRingSaveCopy.Saves.Model
 {
@@ -78,16 +79,42 @@ namespace EldenRingSaveCopy.Saves.Model
             try
             {
                 this.index = slotIndex;
-                this.active =  data.Skip(CHAR_ACTIVE_STATUS_START_INDEX).ToArray()[0 + slotIndex] == 1 ? true : false;
-                this.characterName = Encoding.Unicode.GetString(data.Skip(SAVE_HEADER_START_INDEX + (slotIndex * SAVE_HEADER_LENGTH)).Take(CHAR_NAME_LENGTH).ToArray());
-                this.CharacterLevel = data.Skip(SAVE_HEADER_START_INDEX + (slotIndex * SAVE_HEADER_LENGTH)).ToArray()[CHAR_LEVEL_LOCATION];
+                
+                // Debug logging
+                string debugPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "save_debug.txt");
+                using (StreamWriter writer = new StreamWriter(debugPath, true))
+                {
+                    writer.WriteLine($"\nLoading slot {slotIndex}:");
+                    writer.WriteLine($"File size: {data.Length} bytes");
+                    
+                    // Check active status
+                    byte activeStatus = data.Skip(CHAR_ACTIVE_STATUS_START_INDEX).ToArray()[0 + slotIndex];
+                    writer.WriteLine($"Active status at {CHAR_ACTIVE_STATUS_START_INDEX + slotIndex}: {activeStatus}");
+                    this.active = activeStatus == 1;
+                    
+                    // Check character name
+                    byte[] nameBytes = data.Skip(SAVE_HEADER_START_INDEX + (slotIndex * SAVE_HEADER_LENGTH)).Take(CHAR_NAME_LENGTH).ToArray();
+                    string rawName = Encoding.Unicode.GetString(nameBytes);
+                    writer.WriteLine($"Raw name bytes: {BitConverter.ToString(nameBytes)}");
+                    writer.WriteLine($"Decoded name: {rawName}");
+                    this.characterName = rawName;
+                    
+                    // Check level
+                    byte level = data.Skip(SAVE_HEADER_START_INDEX + (slotIndex * SAVE_HEADER_LENGTH)).ToArray()[CHAR_LEVEL_LOCATION];
+                    writer.WriteLine($"Level at {SAVE_HEADER_START_INDEX + (slotIndex * SAVE_HEADER_LENGTH) + CHAR_LEVEL_LOCATION}: {level}");
+                    this.CharacterLevel = level;
+                }
+
                 this.SecondsPlayed = BitConverter.ToInt32(data.Skip(SAVE_HEADER_START_INDEX + (slotIndex * SAVE_HEADER_LENGTH) + CHAR_PLAYED_START_INDEX).Take(4).ToArray(), 0);
                 this.saveData = data.Skip(SLOT_START_INDEX + (slotIndex * 0x10) + (slotIndex * SLOT_LENGTH)).Take(SLOT_LENGTH).ToArray();
                 this.headerData = data.Skip(SAVE_HEADER_START_INDEX + (slotIndex * SAVE_HEADER_LENGTH)).Take(SAVE_HEADER_LENGTH).ToArray();
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // Log any errors
+                File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "save_error.txt"), 
+                    $"Error loading slot {slotIndex}: {ex.Message}\n{ex.StackTrace}");
                 return false;
             }
         }
