@@ -58,7 +58,19 @@ namespace EldenRingSaveCopy
             try
             {
                 nameDirectory = "C:\\Users\\" + Environment.UserName + "\\AppData\\Roaming\\EldenRing";
-                currentDialog.InitialDirectory = nameDirectory;
+                if (Directory.Exists(nameDirectory))
+                {
+                    currentDialog.InitialDirectory = nameDirectory;
+                }
+                else
+                {
+                    // Try Nightreign directory if Elden Ring directory doesn't exist
+                    nameDirectory = "C:\\Users\\" + Environment.UserName + "\\AppData\\Roaming\\Nightreign";
+                    if (Directory.Exists(nameDirectory))
+                    {
+                        currentDialog.InitialDirectory = nameDirectory;
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -71,7 +83,7 @@ namespace EldenRingSaveCopy
             sourceSaveGames.Clear();
             OpenFileDialog openFileDialog = new OpenFileDialog();
             setCurrentUserDirectory(ref openFileDialog);
-            openFileDialog.Filter = "Elden Ring Save File |ER0000.sl2|Elden Ring Coop Save File |ER0000.co2";
+            openFileDialog.Filter = "Elden Ring Save Files |ER0000.sl2;NR0000.sl2|Elden Ring Coop Save File |ER0000.co2";
             DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
             if (result == DialogResult.OK) // Test result.
             {
@@ -112,7 +124,7 @@ namespace EldenRingSaveCopy
             targetSaveGames.Clear();
             OpenFileDialog openFileDialog = new OpenFileDialog();
             setCurrentUserDirectory(ref openFileDialog);
-            openFileDialog.Filter = "Elden Ring Save File |ER0000.sl2|Elden Ring Coop Save File |ER0000.co2";
+            openFileDialog.Filter = "Elden Ring Save Files |ER0000.sl2;NR0000.sl2|Elden Ring Coop Save File |ER0000.co2";
             DialogResult result = openFileDialog.ShowDialog();
             if (result == DialogResult.OK)
             {
@@ -200,7 +212,7 @@ namespace EldenRingSaveCopy
         private void CreateFileBackup(string path, byte[] file)
         {
             int backupCount = 2;
-            string backupPath = path.Replace("ER0000.sl2", "ER0000.backup1");
+            string backupPath = path.Replace(".sl2", ".backup1");
             while (File.Exists(backupPath))
             {
                 backupPath = backupPath.Remove(backupPath.Length - 1, 1) + $"{backupCount}";
