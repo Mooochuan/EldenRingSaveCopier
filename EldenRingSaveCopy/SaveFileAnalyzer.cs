@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Linq;
 
 namespace EldenRingSaveCopy
 {
@@ -12,9 +13,11 @@ namespace EldenRingSaveCopy
         private TextBox decodedViewer;
         private Button loadButton;
         private Button scanButton;
+        private Button findStructureButton;
         private Label offsetLabel;
         private TrackBar offsetSlider;
         private byte[] fileData;
+        private int currentOffset = 0;
 
         public SaveFileAnalyzer()
         {
@@ -38,16 +41,24 @@ namespace EldenRingSaveCopy
             };
             scanButton.Click += ScanButton_Click;
 
+            findStructureButton = new Button
+            {
+                Text = "Find Structure",
+                Location = new Point(230, 10),
+                Size = new Size(100, 30)
+            };
+            findStructureButton.Click += FindStructureButton_Click;
+
             offsetLabel = new Label
             {
                 Text = "Offset: 0x0",
-                Location = new Point(230, 15),
+                Location = new Point(340, 15),
                 Size = new Size(200, 20)
             };
 
             offsetSlider = new TrackBar
             {
-                Location = new Point(440, 10),
+                Location = new Point(550, 10),
                 Size = new Size(400, 45),
                 Minimum = 0,
                 Maximum = 1000,
@@ -76,7 +87,7 @@ namespace EldenRingSaveCopy
             };
 
             // Add controls to form
-            this.Controls.AddRange(new Control[] { loadButton, scanButton, offsetLabel, offsetSlider, hexViewer, decodedViewer });
+            this.Controls.AddRange(new Control[] { loadButton, scanButton, findStructureButton, offsetLabel, offsetSlider, hexViewer, decodedViewer });
         }
 
         private void LoadButton_Click(object sender, EventArgs e)
@@ -98,6 +109,76 @@ namespace EldenRingSaveCopy
                     }
                 }
             }
+        }
+
+        private void FindStructureButton_Click(object sender, EventArgs e)
+        {
+            if (fileData == null) return;
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("Analyzing save file structure...");
+            sb.AppendLine($"File size: {fileData.Length} bytes");
+
+            // Look for potential character slots
+            for (int i = 0; i < Math.Min(fileData.Length, 0x1000); i += 0x10)
+            {
+                // Check for potential slot header
+                if (fileData[i] == 0x01 || fileData[i] == 0x00)
+                {
+                    sb.AppendLine($"\nPotential slot at 0x{i:X}:");
+                    sb.AppendLine($"Status byte: {fileData[i]:X2}");
+                    
+                    // Show next 32 bytes
+                    byte[] nextBytes = new byte[32];
+                    Array.Copy(fileData, i, nextBytes, 0, Math.Min(32, fileData.Length - i));
+                    sb.AppendLine($"Next bytes: {BitConverter.ToString(nextBytes)}");
+                }
+            }
+
+            // Look for potential character names
+            for (int i = 0; i < fileData.Length - 2; i++)
+            {
+                if (fileData[i] != 0 && fileData[i + 1] == 0)
+                {
+                    // Found potential start of a Unicode string
+                    byte[] potentialName = new byte[0x22];
+                    if (i + 0x22 <= fileData.Length)
+                    {
+                        Array.Copy(fileData, i, potentialName, 0, 0x22);
+                        string name = Encoding.Unicode.GetString(potentialName).TrimEnd('\0');
+                        
+                        // Only show if it looks like a real name
+                        if (name.Length >= 2 && name.All(c => char.IsLetterOrDigit(c) || char.IsPunctuation(c) || char.IsWhiteSpace(c)))
+                        {
+                            sb.AppendLine($"\nPotential character at offset 0x{i:X}:");
+                            sb.AppendLine($"Name: {name}");
+                            
+                            // Look for level byte (usually 1-2 bytes after name)
+                            if (i + 0x22 + 2 < fileData.Length)
+                            {
+                                byte level = fileData[i + 0x22 + 2];
+                                sb.AppendLine($"Level byte at 0x{i + 0x22 + 2:X}: {level}");
+                            }
+                            
+                            // Look for active status (usually a few bytes before name)
+                            if (i >= 4)
+                            {
+                                byte activeStatus = fileData[i - 4];
+                                sb.AppendLine($"Active status at 0x{i - 4:X}: {activeStatus}");
+                            }
+
+                            // Show surrounding bytes
+                            int start = Math.Max(0, i - 16);
+                            int length = Math.Min(64, fileData.Length - start);
+                            byte[] surrounding = new byte[length];
+                            Array.Copy(fileData, start, surrounding, 0, length);
+                            sb.AppendLine($"Surrounding bytes: {BitConverter.ToString(surrounding)}");
+                        }
+                    }
+                }
+            }
+
+            decodedViewer.Text = sb.ToString();
         }
 
         private void ScanButton_Click(object sender, EventArgs e)
@@ -138,6 +219,7 @@ namespace EldenRingSaveCopy
 
         private void OffsetSlider_ValueChanged(object sender, EventArgs e)
         {
+            currentOffset = offsetSlider.Value;
             UpdateView();
         }
 
@@ -145,16 +227,15 @@ namespace EldenRingSaveCopy
         {
             if (fileData == null) return;
 
-            int offset = offsetSlider.Value;
-            offsetLabel.Text = $"Offset: 0x{offset:X}";
+            offsetLabel.Text = $"Offset: 0x{currentOffset:X}";
 
             // Show hex view
             StringBuilder hexSb = new StringBuilder();
             for (int i = 0; i < 32; i++)
             {
-                if (offset + i < fileData.Length)
+                if (currentOffset + i < fileData.Length)
                 {
-                    hexSb.Append($"{fileData[offset + i]:X2} ");
+                    hexSb.Append($"{fileData[currentOffset + i]:X2} ");
                 }
             }
             hexViewer.Text = hexSb.ToString();
@@ -163,9 +244,9 @@ namespace EldenRingSaveCopy
             StringBuilder decodedSb = new StringBuilder();
             for (int i = 0; i < 32; i++)
             {
-                if (offset + i < fileData.Length)
+                if (currentOffset + i < fileData.Length)
                 {
-                    byte b = fileData[offset + i];
+                    byte b = fileData[currentOffset + i];
                     decodedSb.Append(b >= 32 && b <= 126 ? (char)b : '.');
                 }
             }
